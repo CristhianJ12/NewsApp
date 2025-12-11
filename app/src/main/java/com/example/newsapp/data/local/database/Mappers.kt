@@ -1,8 +1,8 @@
 package com.example.newsapp.data.local.database
 
-import NoticiaGuardadaEntity
 import com.example.newsapp.data.local.database.entities.ConfiguracionEntity
 import com.example.newsapp.data.local.database.entities.NoticiaEntity
+import com.example.newsapp.data.local.database.entities.NoticiaGuardadaEntity
 import com.example.newsapp.domain.model.ConfiguracionUsuario
 import com.example.newsapp.domain.model.DiaSemana
 import com.example.newsapp.domain.model.DocumentoCTI

@@ -9,7 +9,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
-import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -130,6 +131,11 @@ class RSSSource @Inject constructor(
                 // Detecta entidad responsable
                 val entidad = detectarEntidad(titulo, contenido)
 
+                // CORRECCIÓN: Parsea la fecha correctamente
+                val fechaPublicacion = item.pubDate?.let { fechaString ->
+                    parsearFecha(fechaString)
+                } ?: System.currentTimeMillis()
+
                 DocumentoCTI(
                     id = id,
                     titulo = titulo,
@@ -138,13 +144,41 @@ class RSSSource @Inject constructor(
                     diario = fuente.nombre,
                     entidadResponsable = entidad,
                     palabrasClave = keywords,
-                    fechaPublicacion = item.pubDate?.time ?: System.currentTimeMillis(),
+                    fechaPublicacion = fechaPublicacion,
                     urlOriginal = url
                 )
             } catch (e: Exception) {
                 null
             }
         }
+    }
+
+    /**
+     * Parsea una fecha en formato String a Long (milisegundos)
+     * Prueba con varios formatos comunes en RSS
+     */
+    private fun parsearFecha(fechaString: String): Long {
+        val formatos = listOf(
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US),
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+        )
+
+        for (formato in formatos) {
+            try {
+                val fecha = formato.parse(fechaString)
+                if (fecha != null) {
+                    return fecha.time
+                }
+            } catch (e: Exception) {
+                // Intenta con el siguiente formato
+            }
+        }
+
+        // Si ningún formato funciona, retorna la fecha actual
+        return System.currentTimeMillis()
     }
 
     /**

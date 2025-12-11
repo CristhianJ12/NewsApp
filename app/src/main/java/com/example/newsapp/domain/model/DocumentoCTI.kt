@@ -1,12 +1,12 @@
 package com.example.newsapp.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
  * Modelo de dominio para un documento/noticia CTI
  * Este es el modelo que se usa en toda la app
+ *
+ * NOTA: No usa @Serializable porque Room maneja la serialización
+ * a través de Gson en los Converters
  */
-@Serializable
 data class DocumentoCTI(
     val id: String,
     val titulo: String,

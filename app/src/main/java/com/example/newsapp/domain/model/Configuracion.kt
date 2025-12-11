@@ -1,12 +1,12 @@
 package com.example.newsapp.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
  * Configuración de preferencias del usuario
  * Se guarda persistentemente en BD
+ *
+ * NOTA: No usa @Serializable porque Room maneja la serialización
+ * a través de Gson en los Converters
  */
-@Serializable
 data class ConfiguracionUsuario(
     val id: String = "default",
     val preferenciasSemanales: Map<DiaSemana, PreferenciaDia> = emptyMap(),
@@ -57,7 +57,6 @@ enum class DiaSemana(val nombreCompleto: String) {
 /**
  * Preferencia para un día específico
  */
-@Serializable
 data class PreferenciaDia(
     val categoriasActivas: List<String> = emptyList(),
     val modoExclusivo: Boolean = false, // true = SOLO estas categorías
@@ -100,7 +99,6 @@ enum class AccionSugerida {
 /**
  * Configuración aplicada por el asistente
  */
-@Serializable
 data class ConfiguracionAplicada(
     val tipo: TipoConfiguracion,
     val parametros: Map<String, String> = emptyMap()

@@ -1,20 +1,15 @@
-// ==========================================
-// 📄 ARCHIVO: NewsDatabase.kt
-// 📁 UBICACIÓN: data/local/database/
-// 🗄️ TIPO: Database (Room)
-// ==========================================
-
 package com.example.newsapp.data.local.database
 
-import NoticiasGuardadasDao
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.newsapp.data.local.database.dao.ConfiguracionDao
 import com.example.newsapp.data.local.database.dao.NoticiasDao
+import com.example.newsapp.data.local.database.dao.NoticiasGuardadasDao
 import com.example.newsapp.data.local.database.entities.ConfiguracionEntity
 import com.example.newsapp.data.local.database.entities.Converters
 import com.example.newsapp.data.local.database.entities.NoticiaEntity
+import com.example.newsapp.data.local.database.entities.NoticiaGuardadaEntity
 
 /**
  * Base de datos principal de la aplicación

@@ -1,13 +1,7 @@
-// ==========================================
-// 📄 ARCHIVO: NoticiasGuardadasDao.kt
-// 📁 UBICACIÓN: data/local/database/dao/
-// 🔷 TIPO: Interface (DAO)
-// ==========================================
-
 package com.example.newsapp.data.local.database.dao
 
-import NoticiaGuardadaEntity
 import androidx.room.*
+import com.example.newsapp.data.local.database.entities.NoticiaGuardadaEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -56,7 +50,3 @@ interface NoticiasGuardadasDao {
     @Query("DELETE FROM noticias_guardadas")
     suspend fun eliminarTodas()
 }
-
-// ==========================================
-// FIN DE ARCHIVO NoticiasGuardadasDao.kt
-// ==========================================

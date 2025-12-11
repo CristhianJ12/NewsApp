@@ -53,13 +53,12 @@ object NetworkModule {
 
     /**
      * Proporciona el RSS Parser
+     * La librería RssParser 6.0.8 usa su propio OkHttpClient interno
      */
     @Provides
     @Singleton
-    fun provideRssParser(okHttpClient: OkHttpClient): RssParser {
-        return RssParser(
-            okHttpClient = okHttpClient
-        )
+    fun provideRssParser(): RssParser {
+        return RssParser()
     }
 
     /**

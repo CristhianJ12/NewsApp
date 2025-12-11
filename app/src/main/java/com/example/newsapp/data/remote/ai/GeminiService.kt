@@ -30,11 +30,12 @@ class GeminiService @Inject constructor(
 
     /**
      * Obtiene o crea el modelo de Gemini
+     * CORRECCIÓN: Usar el nombre correcto del modelo
      */
     private fun obtenerModelo(): GenerativeModel {
         if (model == null && apiKey.isNotBlank()) {
             model = GenerativeModel(
-                modelName = "gemini-1.5-flash",
+                modelName = "gemini-1.5-flash-latest", // ✅ Nombre correcto del modelo
                 apiKey = apiKey,
                 generationConfig = generationConfig {
                     temperature = 0.7f  // Balance entre creatividad y precisión
