@@ -56,7 +56,7 @@ object AppModule {
     @Singleton
     fun provideGeminiService(): GeminiService {
         // 🔑 REEMPLAZA ESTO CON TU API KEY COMPLETA
-        val apiKey = "AIzaSyAgTgou12b-2dLq7pOT1khG2LtgTTGYoOI"  // ← Pega tu API key aquí
+        val apiKey = "AI"  // ← Pega tu API key aquí
 
         return GeminiService(apiKey = apiKey)
     }
