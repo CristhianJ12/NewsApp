@@ -80,6 +80,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     implementation(libs.androidx.ui.graphics)
+    implementation(libs.generativeai)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
@@ -96,9 +97,6 @@ dependencies {
 
     // RSS Parser
     implementation(libs.rss.parser)
-
-    // Gemini AI
-    implementation(libs.generativeai)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -120,4 +118,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
 }

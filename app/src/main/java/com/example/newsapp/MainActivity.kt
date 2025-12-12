@@ -1,14 +1,9 @@
-// ==========================================
-// 📄 ARCHIVO: MainActivity.kt
-// 📁 UBICACIÓN: / (raíz del paquete principal)
-// 🟢 TIPO: Activity
-// ==========================================
-
 package com.example.newsapp
 
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,56 +24,90 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    // Variable para saber si el permiso fue concedido
+    private var permisoAudioConcedido = false
+
     // Launcher para solicitar permiso de audio
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
+        permisoAudioConcedido = isGranted
+
         if (isGranted) {
-            // Permiso concedido - la app puede usar el micrófono
+            Toast.makeText(
+                this,
+                "✅ Permiso de micrófono concedido. Ya puedes usar comandos de voz.",
+                Toast.LENGTH_SHORT
+            ).show()
         } else {
-            // Permiso denegado - mostrar mensaje al usuario
-            // TODO: Mostrar un diálogo explicando por qué necesitamos el permiso
+            Toast.makeText(
+                this,
+                "⚠️ Permiso de micrófono denegado. No podrás usar comandos de voz.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Solicita permiso de audio si no está concedido
+        // Solicita permiso de audio al iniciar
         solicitarPermisoAudio()
 
         setContent {
             NewsAppTheme {
-                // Surface es el contenedor principal de Material Design
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // NavGraph maneja toda la navegación de la app
                     NavGraph()
                 }
             }
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        // Verifica permisos cada vez que la app vuelve al frente
+        if (!verificarPermisoAudio()) {
+            Toast.makeText(
+                this,
+                "💡 Tip: Necesitas dar permiso de micrófono para usar comandos de voz",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    /**
+     * Verifica si el permiso de audio está concedido
+     */
+    private fun verificarPermisoAudio(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
     /**
      * Solicita el permiso RECORD_AUDIO si no está concedido
-     * Necesario para el reconocimiento de voz
      */
     private fun solicitarPermisoAudio() {
         when {
             // Permiso ya concedido
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                // No hacer nada, ya tenemos el permiso
+            verificarPermisoAudio() -> {
+                permisoAudioConcedido = true
             }
 
             // Deberíamos mostrar una explicación
             shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO) -> {
-                // Aquí podrías mostrar un diálogo explicando por qué necesitas el permiso
-                // Por ahora, solicitamos directamente
+                Toast.makeText(
+                    this,
+                    "🎤 Esta app necesita acceso al micrófono para reconocer tus comandos de voz",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Solicita después de mostrar el mensaje
                 requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
 
@@ -89,7 +118,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// ==========================================
-// FIN DE ARCHIVO MainActivity.kt
-// ==========================================

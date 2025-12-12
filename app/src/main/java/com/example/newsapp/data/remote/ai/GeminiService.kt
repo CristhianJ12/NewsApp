@@ -9,9 +9,6 @@ import javax.inject.Singleton
 
 /**
  * Servicio para interactuar con Gemini AI
- * Maneja toda la comunicación con la API de Google Gemini
- *
- * COSTO: ~$0.0002 por consulta usando Gemini Flash
  */
 @Singleton
 class GeminiService @Inject constructor(
@@ -30,39 +27,33 @@ class GeminiService @Inject constructor(
 
     /**
      * Obtiene o crea el modelo de Gemini
-     * CORRECCIÓN: Usar el nombre correcto del modelo
      */
     private fun obtenerModelo(): GenerativeModel {
         if (model == null && apiKey.isNotBlank()) {
             model = GenerativeModel(
-                modelName = "gemini-1.5-flash-latest", // ✅ Nombre correcto del modelo
+                modelName = "gemini-pro", // Modelo moderno y estable
                 apiKey = apiKey,
                 generationConfig = generationConfig {
-                    temperature = 0.7f  // Balance entre creatividad y precisión
+                    // Propiedad 'temperature'
+                    temperature = 0.7f
+                    // Propiedades Top-K y Top-P
                     topK = 40
                     topP = 0.95f
-                    maxOutputTokens = 500 // Limitar respuesta para controlar costos
+                    // El límite de tokens se llama 'maxOutputTokens'
+                    maxOutputTokens = 1024
                 }
             )
         }
+        // Este throw IllegalStateException garantiza que no se use un modelo nulo
         return model ?: throw IllegalStateException("API key no configurada")
     }
 
-    /**
-     * Verifica si el servicio está configurado
-     */
     fun estaConfigurado(): Boolean {
         return apiKey.isNotBlank()
     }
 
-    /**
-     * Genera una respuesta conversacional basada en el contexto
-     *
-     * @param contexto Información relevante encontrada en la BD
-     * @param consulta Pregunta del usuario
-     * @param promptSistema Instrucciones del sistema (opcional)
-     * @return Respuesta generada por la IA
-     */
+    // --- EL RESTO DE LAS FUNCIONES ---
+
     suspend fun generarRespuesta(
         contexto: String,
         consulta: String,
@@ -87,7 +78,7 @@ class GeminiService @Inject constructor(
             val textoRespuesta = response.text ?: ""
 
             if (textoRespuesta.isBlank()) {
-                Result.failure(Exception("Gemini no generó respuesta"))
+                Result.failure(Exception("Gemini no generó respuesta para la consulta: $consulta"))
             } else {
                 Result.success(textoRespuesta.trim())
             }
@@ -97,34 +88,40 @@ class GeminiService @Inject constructor(
         }
     }
 
-    /**
-     * Genera un resumen ejecutivo de un documento
-     *
-     * @param contenido Contenido completo del documento
-     * @return Resumen de máximo 100 palabras
-     */
+    // NOTA: Debes agregar aquí tus funciones 'generarResumen' y 'detectarIntencion'
+
+    companion object {
+        // CORRECCIÓN: Definición del constante que faltaba
+        private const val PROMPT_SISTEMA_DEFAULT = """
+            Eres un asistente de noticias peruano conversacional e inteligente.
+            Tu propósito es responder preguntas basadas en el contexto proporcionado.
+            Sé conciso, profesional y responde en español.
+        """
+    }
+
     suspend fun generarResumen(contenido: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val modelo = obtenerModelo()
 
-            val prompt = """
-                Resume el siguiente texto en EXACTAMENTE 100 palabras o menos.
-                El resumen debe ser claro, directo y estilo periodístico.
-                Estructura: QUÉ ocurrió, QUIÉN está involucrado, CÓMO afecta.
-                
-                TEXTO:
-                ${contenido.take(3000)}
-                
-                RESUMEN (máximo 100 palabras):
+            // Define el prompt del sistema para el resumen
+            val sistemaPrompt = """
+                Eres un asistente de noticias experto en resumir. Tu tarea es generar un resumen
+                ejecutivo del contenido proporcionado.
+                El resumen debe tener una longitud máxima de 100 palabras.
+                Estructura tu respuesta de forma profesional.
             """.trimIndent()
 
-            val response = modelo.generateContent(prompt)
-            val resumen = response.text ?: ""
+            val usuarioPrompt = "TEXTO A RESUMIR:\n${contenido}\n\nRESUMEN (máximo 100 palabras):"
 
-            if (resumen.isBlank()) {
-                Result.failure(Exception("No se pudo generar resumen"))
+            val promptCompleto = "$sistemaPrompt\n\n$usuarioPrompt"
+
+            val response = modelo.generateContent(promptCompleto)
+            val textoRespuesta = response.text ?: ""
+
+            if (textoRespuesta.isBlank()) {
+                Result.failure(Exception("Gemini no generó resumen."))
             } else {
-                Result.success(resumen.trim())
+                Result.success(textoRespuesta.trim())
             }
 
         } catch (e: Exception) {
@@ -132,70 +129,42 @@ class GeminiService @Inject constructor(
         }
     }
 
+
     /**
-     * Detecta la intención de la consulta del usuario
-     *
-     * @param consulta Texto de la consulta
-     * @return Intención detectada en formato JSON
+     * Detecta la intención del usuario a partir de una consulta de texto.
+     * (Función necesaria si se usa en otros UseCases)
      */
     suspend fun detectarIntencion(consulta: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val modelo = obtenerModelo()
 
-            val prompt = """
-                Analiza esta consulta y determina la intención del usuario.
-                
-                CONSULTA: "$consulta"
-                
-                Responde SOLO con una de estas opciones:
-                - "resumen_dia" si pregunta por noticias generales de hoy
-                - "buscar_categoria:NOMBRE" si busca una categoría específica
-                - "buscar_texto:TEXTO" si busca algo específico
-                - "configurar:TIPO" si quiere configurar algo
-                - "no_reconocida" si no entiendes
-                
-                RESPUESTA:
+            val sistemaPrompt = """
+                Analiza la consulta del usuario y determina su intención. Responde ÚNICA y
+                EXCLUSIVAMENTE con el formato predefinido.
+                Opciones de respuesta (SOLO UNA):
+                - "resumen_dia"
+                - "buscar_categoria:NOMBRE_CATEGORIA"
+                - "buscar_texto:TEXTO_BUSQUEDA"
+                - "configurar:TIPO_CONFIG"
+                - "no_reconocida"
+                No añadas explicaciones, comillas o texto adicional.
             """.trimIndent()
 
-            val response = modelo.generateContent(prompt)
-            val intencion = response.text ?: "no_reconocida"
+            val usuarioPrompt = "CONSULTA: \"$consulta\"\n\nRESPUESTA ÚNICA Y DIRECTA:"
 
-            Result.success(intencion.trim())
+            val promptCompleto = "$sistemaPrompt\n\n$usuarioPrompt"
+
+            val response = modelo.generateContent(promptCompleto)
+            val textoRespuesta = response.text ?: ""
+
+            if (textoRespuesta.isBlank()) {
+                Result.success("no_reconocida")
+            } else {
+                Result.success(textoRespuesta.trim())
+            }
 
         } catch (e: Exception) {
             Result.failure(Exception("Error al detectar intención: ${e.message}", e))
         }
-    }
-
-    companion object {
-        /**
-         * Prompt del sistema por defecto
-         * Define el comportamiento general del asistente
-         */
-        private const val PROMPT_SISTEMA_DEFAULT = """
-Eres un asistente de noticias peruano conversacional e inteligente.
-
-TUS CAPACIDADES:
-1. INTERPRETAR: Entender qué información busca el usuario
-2. BUSCAR: En los documentos que te proporciono como contexto
-3. RESUMIR: De forma clara, concisa y conversacional
-4. SUGERIR: Acciones útiles para el usuario
-
-REGLAS IMPORTANTES:
-- Responde SOLO basándote en el contexto proporcionado
-- Si no tienes información, dilo claramente
-- Sé conciso: máximo 150 palabras por respuesta
-- Usa español peruano natural y profesional
-- Si hay varias noticias, menciona las 3 más relevantes
-- Pregunta si el usuario quiere más detalles
-- No inventes información que no esté en el contexto
-- Si el usuario menciona un nombre o término que no está en el contexto, 
-  dile que no encontraste información sobre eso
-
-ESTILO:
-- Natural y conversacional (como hablar con un colega)
-- Directo y sin rodeos
-- Profesional pero amigable
-"""
     }
 }

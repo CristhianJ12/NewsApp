@@ -48,12 +48,17 @@ object AppModule {
 
     /**
      * Proporciona el servicio de Gemini AI
+     *
+     * ⚠️ TEMPORAL: API key hardcodeada solo para pruebas
+     * ⚠️ PRODUCCIÓN: Eliminar esto y configurar desde la UI
      */
     @Provides
     @Singleton
     fun provideGeminiService(): GeminiService {
-        // Por ahora sin API key, se configurará desde la UI
-        return GeminiService(apiKey = "")
+        // 🔑 REEMPLAZA ESTO CON TU API KEY COMPLETA
+        val apiKey = "AIzaSyAgTgou12b-2dLq7pOT1khG2LtgTTGYoOI"  // ← Pega tu API key aquí
+
+        return GeminiService(apiKey = apiKey)
     }
 
     /**

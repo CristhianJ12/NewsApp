@@ -49,8 +49,17 @@ class SpeechRecognizerManager @Inject constructor(
             return@callbackFlow
         }
 
+        // CORRECCIÓN: Destruir recognizer anterior si existe
+        limpiar()
+
         // Crea el recognizer
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+
+        if (speechRecognizer == null) {
+            trySend(EstadoReconocimiento.Error("No se pudo crear el servicio de reconocimiento"))
+            close()
+            return@callbackFlow
+        }
 
         // Configura el intent
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -63,10 +72,11 @@ class SpeechRecognizerManager @Inject constructor(
             putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "es-PE")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            // Timeouts
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L)
+
+            // CORRECCIÓN: Aumentar timeouts para mejor reconocimiento
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 8000L)
         }
 
         // Configura el listener
@@ -98,21 +108,21 @@ class SpeechRecognizerManager @Inject constructor(
                 _estaEscuchando = false
 
                 val mensaje = when (error) {
-                    SpeechRecognizer.ERROR_AUDIO -> "Error de audio"
-                    SpeechRecognizer.ERROR_CLIENT -> "Error del cliente"
+                    SpeechRecognizer.ERROR_AUDIO -> "Error de audio. Verifica el micrófono"
+                    SpeechRecognizer.ERROR_CLIENT -> "Error del cliente. Intenta de nuevo"
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
                         "Permiso de micrófono no concedido"
-                    SpeechRecognizer.ERROR_NETWORK -> "Error de red"
+                    SpeechRecognizer.ERROR_NETWORK -> "Error de red. Verifica tu conexión"
                     SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
-                        "Tiempo de espera de red agotado"
+                        "Tiempo de espera agotado. Verifica tu conexión"
                     SpeechRecognizer.ERROR_NO_MATCH ->
-                        "No se reconoció ninguna voz. Intenta hablar más claro"
+                        "No se reconoció tu voz. Intenta hablar más claro"
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY ->
-                        "Reconocedor ocupado, intenta de nuevo"
-                    SpeechRecognizer.ERROR_SERVER -> "Error del servidor de Google"
+                        "Reconocedor ocupado. Espera un momento"
+                    SpeechRecognizer.ERROR_SERVER -> "Error del servidor de Google. Intenta más tarde"
                     SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
-                        "No se detectó voz. Por favor habla"
-                    else -> "Error desconocido: $error"
+                        "No detecté tu voz. Por favor habla cuando veas 'Escuchando...'"
+                    else -> "Error desconocido ($error). Intenta de nuevo"
                 }
 
                 trySend(EstadoReconocimiento.Error(mensaje))
@@ -127,7 +137,7 @@ class SpeechRecognizerManager @Inject constructor(
                 val confidences = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
 
                 if (matches.isNullOrEmpty()) {
-                    trySend(EstadoReconocimiento.Error("No se reconoció ninguna voz"))
+                    trySend(EstadoReconocimiento.Error("No se reconoció tu voz"))
                 } else {
                     // Toma el resultado con mayor confianza
                     val textoReconocido = matches[0]
@@ -163,8 +173,14 @@ class SpeechRecognizerManager @Inject constructor(
         })
 
         // Inicia el reconocimiento
-        trySend(EstadoReconocimiento.Iniciando)
-        speechRecognizer?.startListening(intent)
+        try {
+            trySend(EstadoReconocimiento.Iniciando)
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            trySend(EstadoReconocimiento.Error("Error al iniciar reconocimiento: ${e.message}"))
+            close()
+            limpiar()
+        }
 
         awaitClose {
             cancelar()
@@ -175,7 +191,11 @@ class SpeechRecognizerManager @Inject constructor(
      * Cancela el reconocimiento actual
      */
     fun cancelar() {
-        speechRecognizer?.cancel()
+        try {
+            speechRecognizer?.cancel()
+        } catch (e: Exception) {
+            // Ignorar errores al cancelar
+        }
         _estaEscuchando = false
         limpiar()
     }
@@ -184,7 +204,11 @@ class SpeechRecognizerManager @Inject constructor(
      * Detiene el reconocimiento actual
      */
     fun detener() {
-        speechRecognizer?.stopListening()
+        try {
+            speechRecognizer?.stopListening()
+        } catch (e: Exception) {
+            // Ignorar errores al detener
+        }
         _estaEscuchando = false
     }
 
@@ -192,7 +216,11 @@ class SpeechRecognizerManager @Inject constructor(
      * Limpia recursos
      */
     private fun limpiar() {
-        speechRecognizer?.destroy()
+        try {
+            speechRecognizer?.destroy()
+        } catch (e: Exception) {
+            // Ignorar errores al destruir
+        }
         speechRecognizer = null
         _estaEscuchando = false
     }
